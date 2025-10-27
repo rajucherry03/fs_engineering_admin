@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.next/
+.out/
+coverage/
+.vite/
+.parcel-cache/
+.cache/
+.env
+.env.*
+*.log
+.DS_Store
+.vscode/
