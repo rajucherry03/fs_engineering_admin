@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import AdminLayout from './components/layout/AdminLayout.jsx'
-import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import ProjectManagement from './pages/admin/ProjectManagement.jsx'
 import ProjectNew from './pages/admin/ProjectNew.jsx'
 import ProjectEdit from './pages/admin/ProjectEdit.jsx'
@@ -43,10 +42,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={user && adminUser ? "/admin" : "/login"} replace />} />
+      <Route path="/" element={<Navigate to={user && adminUser ? "/admin/portfolio" : "/login"} replace />} />
       <Route 
         path="/login" 
-        element={user && adminUser ? <Navigate to="/admin" replace /> : <LoginPage />} 
+        element={user && adminUser ? <Navigate to="/admin/portfolio" replace /> : <LoginPage />} 
       />
       <Route
         path="/admin"
@@ -56,7 +55,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<AdminDashboard />} />
+        <Route index element={<Navigate to="/admin/portfolio" replace />} />
         {/* Legacy project routes (kept for backward compatibility) */}
         <Route path="projects" element={<ProjectManagement />} />
         <Route path="projects/new" element={<ProjectNew />} />
@@ -81,7 +80,7 @@ function AppRoutes() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to={user && adminUser ? "/admin" : "/login"} replace />} />
+      <Route path="*" element={<Navigate to={user && adminUser ? "/admin/portfolio" : "/login"} replace />} />
     </Routes>
   )
 }
