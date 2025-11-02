@@ -11,6 +11,8 @@ import {
   MoreVertical
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import ImageWithFallback from '../../components/ui/ImageWithFallback'
+import ImageUpload from '../../components/ui/ImageUpload'
 
 const ContentTestimonials = () => {
   const [searchQuery, setSearchQuery] = useState('')
@@ -159,16 +161,13 @@ const ContentTestimonials = () => {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
-                  {testimonial.avatar ? (
-                    <img
-                      src={testimonial.avatar}
-                      alt={testimonial.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  )}
+                <div className="mr-3">
+                  <ImageWithFallback
+                    src={testimonial.avatar}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900"
+                    fallbackText={testimonial.name ? testimonial.name.charAt(0).toUpperCase() : '👤'}
+                  />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">

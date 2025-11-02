@@ -7,7 +7,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyAu7c9J7QAcGFjHj0xw39QjsmvdyrC2tsQ",
   authDomain: "consultancy-services-48b5d.firebaseapp.com",
   projectId: "consultancy-services-48b5d",
-  storageBucket: "consultancy-services-48b5d.firebasestorage.app",
+  // Try both bucket formats - Firebase SDK should handle this, but explicitly setting helps
+  storageBucket: "consultancy-services-48b5d.appspot.com", // Use appspot.com format (matches error URL)
   messagingSenderId: "695440911733",
   appId: "1:695440911733:web:17e181929d9f0d2d91773c",
   measurementId: "G-E0MNZVY30F"

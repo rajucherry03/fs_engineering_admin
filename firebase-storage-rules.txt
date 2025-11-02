@@ -1,0 +1,28 @@
+// Firebase Storage Security Rules
+// Copy these rules to your Firebase Console > Storage > Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload images
+    match /projects/images/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to upload testimonial avatars
+    match /testimonials/avatars/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to upload content images
+    match /content/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow public read access for all images (for display)
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

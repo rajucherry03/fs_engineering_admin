@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useProjects } from '../../hooks/useProjects'
+import ImageWithFallback from '../../components/ui/ImageWithFallback'
 import { 
   Plus, 
   Search, 
@@ -12,21 +14,26 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  FolderOpen
+  FolderOpen,
+  X
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 const ProjectManagement = () => {
+  const navigate = useNavigate()
   const { projects, loading, deleteProject, bulkDeleteProjects, bulkUpdateProjects } = useProjects()
   const [selectedProjects, setSelectedProjects] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showBulkActions, setShowBulkActions] = useState(false)
+  const [selectedProjectForModal, setSelectedProjectForModal] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          project.description.toLowerCase().includes(searchQuery.toLowerCase())
+    // Removed technologies filter since that field was removed
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -50,13 +57,26 @@ const ProjectManagement = () => {
   const handleBulkDelete = async () => {
     if (selectedProjects.length === 0) return
     
+    if (!window.confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)? This action cannot be undone.`)) {
+      return
+    }
+    
     try {
+      toast.loading(`Deleting ${selectedProjects.length} project(s)...`, { id: 'bulk-delete' })
+      const count = selectedProjects.length
       await bulkDeleteProjects(selectedProjects)
       setSelectedProjects([])
       setShowBulkActions(false)
-      toast.success(`${selectedProjects.length} projects deleted successfully`)
+      toast.success(`${count} project(s) deleted successfully!`, { 
+        id: 'bulk-delete',
+        duration: 4000
+      })
     } catch (error) {
-      toast.error('Failed to delete projects')
+      const errorMessage = error.message || 'Failed to delete projects. Please try again.'
+      toast.error(errorMessage, { 
+        id: 'bulk-delete',
+        duration: 5000
+      })
     }
   }
 
@@ -74,24 +94,34 @@ const ProjectManagement = () => {
   }
 
   const handleDeleteProject = async (projectId) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
+    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
       try {
+        toast.loading('Deleting project...', { id: 'delete-project' })
         await deleteProject(projectId)
-        toast.success('Project deleted successfully')
+        toast.success('Project deleted successfully!', { 
+          id: 'delete-project',
+          duration: 4000
+        })
       } catch (error) {
-        toast.error('Failed to delete project')
+        const errorMessage = error.message || 'Failed to delete project. Please try again.'
+        toast.error(errorMessage, { 
+          id: 'delete-project',
+          duration: 5000
+        })
       }
     }
   }
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'published':
+      case 'completed':
         return <CheckCircle className="w-4 h-4 text-green-500" />
+      case 'ongoing':
+        return <Clock className="w-4 h-4 text-blue-500" />
       case 'draft':
         return <Clock className="w-4 h-4 text-yellow-500" />
-      case 'archived':
-        return <Archive className="w-4 h-4 text-gray-500" />
+      case 'on_hold':
+        return <AlertCircle className="w-4 h-4 text-orange-500" />
       default:
         return <AlertCircle className="w-4 h-4 text-gray-500" />
     }
@@ -99,12 +129,14 @@ const ProjectManagement = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'published':
+      case 'completed':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+      case 'ongoing':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
       case 'draft':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-      case 'archived':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+      case 'on_hold':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
     }
@@ -123,12 +155,15 @@ const ProjectManagement = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Portfolio Management</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage and organize your projects
+            Manage and organize your portfolio items
           </p>
         </div>
-        <button className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+        <button 
+          onClick={() => navigate('/admin/portfolio/new')}
+          className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Project
         </button>
@@ -142,7 +177,7 @@ const ProjectManagement = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search projects..."
+                placeholder="Search portfolio..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
@@ -157,8 +192,9 @@ const ProjectManagement = () => {
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="on_hold">On Hold</option>
             </select>
             <button className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center">
               <Filter className="w-4 h-4 mr-2" />
@@ -177,20 +213,20 @@ const ProjectManagement = () => {
         >
           <div className="flex items-center justify-between">
             <span className="text-primary-700 dark:text-primary-300 font-medium">
-              {selectedProjects.length} project{selectedProjects.length > 1 ? 's' : ''} selected
+              {selectedProjects.length} item{selectedProjects.length > 1 ? 's' : ''} selected
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => handleBulkStatusUpdate('published')}
+                onClick={() => handleBulkStatusUpdate('completed')}
                 className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded"
               >
-                Publish
+                Mark Complete
               </button>
               <button
-                onClick={() => handleBulkStatusUpdate('archived')}
-                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded"
+                onClick={() => handleBulkStatusUpdate('ongoing')}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
               >
-                Archive
+                Mark Ongoing
               </button>
               <button
                 onClick={handleBulkDelete}
@@ -233,6 +269,12 @@ const ProjectManagement = () => {
                   Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Technologies
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Featured
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Views
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -261,13 +303,22 @@ const ProjectManagement = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <img
-                          className="h-10 w-10 rounded-lg object-cover"
-                          src={project.image || '/placeholder-image.jpg'}
+                      <button
+                        type="button"
+                        className="flex-shrink-0 focus:outline-none"
+                        onClick={() => {
+                          setSelectedProjectForModal(project)
+                          setShowDetailsModal(true)
+                        }}
+                        title="View details"
+                      >
+                        <ImageWithFallback
+                          src={project.image}
                           alt={project.title}
+                          className="h-12 w-12 rounded-lg object-cover"
+                          fallbackText={project.title ? project.title.charAt(0).toUpperCase() : 'P'}
                         />
-                      </div>
+                      </button>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {project.title}
@@ -281,25 +332,62 @@ const ProjectManagement = () => {
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                       {getStatusIcon(project.status)}
-                      <span className="ml-1">{project.status}</span>
+                      <span className="ml-1 capitalize">{project.status.replace('_', ' ')}</span>
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                     {project.category}
                   </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {project.technologies?.slice(0, 3).map((tech, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                      {project.technologies?.length > 3 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                          +{project.technologies.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {project.featured ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                        ⭐ Featured
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {project.views}
+                    {project.views || 0}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(project.createdAt.seconds * 1000).toLocaleDateString()}
+                    {new Date(project.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                      <button 
+                        onClick={() => navigate(`/admin/portfolio/edit/${project.id}`)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        title="Edit project"
+                      >
                         <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        title="View details"
+                        onClick={() => {
+                          setSelectedProjectForModal(project)
+                          setShowDetailsModal(true)
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDeleteProject(project.id)}
@@ -319,10 +407,103 @@ const ProjectManagement = () => {
       {filteredProjects.length === 0 && (
         <div className="text-center py-12">
           <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No projects found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No portfolio items found</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Get started by creating a new project.
+            Get started by creating a new portfolio item.
           </p>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedProjectForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowDetailsModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-3xl w-full mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {selectedProjectForModal.title || 'Portfolio Item'}
+              </h2>
+              <button
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
+                onClick={() => setShowDetailsModal(false)}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1">
+                <ImageWithFallback
+                  src={selectedProjectForModal.image}
+                  alt={selectedProjectForModal.title}
+                  className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                  fallbackText={selectedProjectForModal.title ? selectedProjectForModal.title.charAt(0).toUpperCase() : 'P'}
+                />
+                <div className="mt-4 space-y-2">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Category:</span> {selectedProjectForModal.category || '-'}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Status:</span> <span className="capitalize">{selectedProjectForModal.status?.replace('_',' ') || '-'}</span>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <span className="font-medium">Featured:</span> {selectedProjectForModal.featured ? 'Yes' : 'No'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Description</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{selectedProjectForModal.description || '-'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Analysis</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{selectedProjectForModal.analysis || '-'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Structure</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{selectedProjectForModal.structure || '-'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Estimation</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{selectedProjectForModal.estimation || '-'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Technologies</h3>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedProjectForModal.technologies?.length
+                      ? selectedProjectForModal.technologies.map((tech, idx) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                            {tech}
+                          </span>
+                        ))
+                      : <span className="text-sm text-gray-700 dark:text-gray-300">-</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+              <button
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Close
+              </button>
+              <button
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg"
+                onClick={() => {
+                  setShowDetailsModal(false)
+                  navigate(`/admin/portfolio/edit/${selectedProjectForModal.id}`)
+                }}
+              >
+                Edit
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -330,3 +511,7 @@ const ProjectManagement = () => {
 }
 
 export default ProjectManagement
+
+/* Details Modal */
+// Render modal at the end to avoid layout issues
+

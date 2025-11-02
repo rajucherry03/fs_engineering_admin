@@ -68,37 +68,79 @@ export class ProjectService {
   static async createProject(projectData) {
     try {
       const now = new Date().toISOString()
+      let imageData = projectData.image || ''
+      
+      // Store base64 image directly in Firestore (same technique as existing projects)
+      // If it's a base64 data URI, store it as-is; if it's a URL, store the URL
       const project = {
         title: projectData.title || '',
         description: projectData.description || '',
-        image: projectData.image || '',
-        technologies: projectData.technologies || [],
-        category: projectData.category || '',
+        image: imageData, // Store base64 data URI or URL directly in Firestore
         analysis: projectData.analysis || '',
-        structure: projectData.structure || '',
         estimation: projectData.estimation || '',
         status: projectData.status || 'draft',
         createdAt: now,
         updatedAt: now,
-        views: 0,
-        featured: projectData.featured || false
+        views: 0
+      }
+
+      console.log('Creating project in Firestore with base64 image...')
+      const docRef = await addDoc(collection(db, 'projects'), project)
+      console.log('Project created successfully with ID:', docRef.id)
+      
+      // Image is already stored as base64 in the document above
+      // No need to upload to Storage - store base64 directly like existing data
+      if (imageData && imageData.startsWith('data:image/')) {
+        console.log('Image stored as base64 data URI directly in Firestore')
+      } else if (imageData) {
+        console.log('Image URL stored in Firestore:', imageData.substring(0, 50) + '...')
       }
       
-      const docRef = await addDoc(collection(db, 'projects'), project)
       return docRef.id
     } catch (error) {
-      throw error
+      console.error('Error creating project:', error)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      
+      // Provide more helpful error messages
+      if (error.code === 'permission-denied') {
+        throw new Error('Permission denied. Please check your Firebase security rules and ensure you are logged in.')
+      } else if (error.code === 'unavailable') {
+        throw new Error('Firebase service is currently unavailable. Please try again later.')
+      } else if (error.message) {
+        throw new Error(`Failed to create project: ${error.message}`)
+      } else {
+        throw error
+      }
     }
   }
 
   static async updateProject(id, updates) {
     try {
       const docRef = doc(db, 'projects', id)
+      
+      // Store base64 image directly in Firestore (same technique as existing projects)
+      // If it's a base64 data URI, store it as-is; if it's a URL, store the URL
+      let imageData = updates.image
+      
+      if (imageData && imageData.startsWith('data:image/')) {
+        // Base64 data URI - store directly in Firestore (no upload to Storage)
+        console.log('Storing base64 image directly in Firestore (no Storage upload)')
+        updates.image = imageData
+      } else if (imageData) {
+        // Already a URL - store it as-is
+        console.log('Storing image URL in Firestore:', imageData.substring(0, 50) + '...')
+        updates.image = imageData
+      }
+      
       await updateDoc(docRef, {
         ...updates,
         updatedAt: new Date().toISOString()
       })
+      
+      console.log('Project updated successfully with base64 image stored directly in Firestore')
     } catch (error) {
+      console.error('Error updating project:', error)
       throw error
     }
   }

@@ -5,6 +5,7 @@ import AdminLayout from './components/layout/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import ProjectManagement from './pages/admin/ProjectManagement.jsx'
 import ProjectNew from './pages/admin/ProjectNew.jsx'
+import ProjectEdit from './pages/admin/ProjectEdit.jsx'
 import ProjectCategories from './pages/admin/ProjectCategories.jsx'
 import ProjectTemplates from './pages/admin/ProjectTemplates.jsx'
 import UserManagement from './pages/admin/UserManagement.jsx'
@@ -42,6 +43,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/" element={<Navigate to={user && adminUser ? "/admin" : "/login"} replace />} />
       <Route 
         path="/login" 
         element={user && adminUser ? <Navigate to="/admin" replace /> : <LoginPage />} 
@@ -55,10 +57,19 @@ function AppRoutes() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        {/* Legacy project routes (kept for backward compatibility) */}
         <Route path="projects" element={<ProjectManagement />} />
         <Route path="projects/new" element={<ProjectNew />} />
+        <Route path="projects/edit/:id" element={<ProjectEdit />} />
         <Route path="projects/categories" element={<ProjectCategories />} />
         <Route path="projects/templates" element={<ProjectTemplates />} />
+
+        {/* New portfolio routes */}
+        <Route path="portfolio" element={<ProjectManagement />} />
+        <Route path="portfolio/new" element={<ProjectNew />} />
+        <Route path="portfolio/edit/:id" element={<ProjectEdit />} />
+        <Route path="portfolio/categories" element={<ProjectCategories />} />
+        <Route path="portfolio/templates" element={<ProjectTemplates />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="users/roles" element={<UserRoles />} />
         <Route path="users/permissions" element={<UserPermissions />} />
@@ -70,7 +81,7 @@ function AppRoutes() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/admin" replace />} />
+      <Route path="*" element={<Navigate to={user && adminUser ? "/admin" : "/login"} replace />} />
     </Routes>
   )
 }

@@ -10,8 +10,17 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001,
-    host: true
+    port: 5173,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        timeout: 5000,
+        // Ignore connection errors - fallback logic handles them
+        ws: false
+      }
+    }
   },
   build: {
     outDir: 'dist',

@@ -1,0 +1,24 @@
+{
+  "cors": [
+    {
+      "origin": [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "https://consultancy-services-48b5d.firebaseapp.com",
+        "https://consultancy-services-48b5d.web.app"
+      ],
+      "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+      "maxAgeSeconds": 3600,
+      "responseHeader": [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Methods",
+        "Access-Control-Allow-Headers"
+      ]
+    }
+  ]
+}

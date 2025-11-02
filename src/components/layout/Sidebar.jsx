@@ -1,12 +1,7 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { 
-  LayoutDashboard, 
   FolderOpen, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings,
   X,
   LogOut,
   Loader2
@@ -16,61 +11,19 @@ import { useAuth } from '../../hooks/useAuth'
 const Sidebar = ({ isOpen, onClose }) => {
   const { adminUser, signOut } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const location = useLocation()
 
   const navigation = [
     { 
-      name: 'Dashboard', 
-      href: '/admin', 
-      icon: LayoutDashboard,
-      badge: null
-    },
-    { 
-      name: 'Projects', 
-      href: '/admin/projects', 
+      name: 'Portfolio', 
+      href: '/admin/portfolio', 
       icon: FolderOpen,
       badge: '12',
       submenu: [
-        { name: 'All Projects', href: '/admin/projects' },
-        { name: 'Add New', href: '/admin/projects/new' },
-        { name: 'Categories', href: '/admin/projects/categories' },
-        { name: 'Templates', href: '/admin/projects/templates' }
+        { name: 'All Portfolio', href: '/admin/portfolio' },
+        { name: 'Add New', href: '/admin/portfolio/new' }
       ]
-    },
-    { 
-      name: 'Content', 
-      href: '/admin/content', 
-      icon: FileText,
-      badge: null,
-      submenu: [
-        { name: 'Pages', href: '/admin/content/pages' },
-        { name: 'Services', href: '/admin/content/services' },
-        { name: 'Testimonials', href: '/admin/content/testimonials' },
-        { name: 'Blog', href: '/admin/content/blog' }
-      ]
-    },
-    { 
-      name: 'Users', 
-      href: '/admin/users', 
-      icon: Users,
-      badge: '3',
-      submenu: [
-        { name: 'All Users', href: '/admin/users' },
-        { name: 'Roles', href: '/admin/users/roles' },
-        { name: 'Permissions', href: '/admin/users/permissions' }
-      ]
-    },
-    { 
-      name: 'Analytics', 
-      href: '/admin/analytics', 
-      icon: BarChart3,
-      badge: null
-    },
-    { 
-      name: 'Settings', 
-      href: '/admin/settings', 
-      icon: Settings,
-      badge: null
-    },
+    }
   ]
 
   const handleSignOut = async () => {
@@ -85,12 +38,17 @@ const Sidebar = ({ isOpen, onClose }) => {
     }
   }
 
+  // Check if parent nav item should be active (only if exactly on that route, not sub-routes)
+  const isParentActive = (href) => {
+    return location.pathname === href || location.pathname === href + '/'
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
@@ -120,25 +78,26 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navigation.map((item) => (
-              <div key={item.name}>
+              <div key={item.name} className="space-y-1">
                 <NavLink
                   to={item.href}
-                  className={({ isActive }) =>
-                    `flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 dark:from-blue-900/30 dark:to-purple-900/30 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50 hover:shadow-sm'
+                  className={({ isActive }) => {
+                    const active = isParentActive(item.href)
+                    return `flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      active
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 hover:text-blue-700 dark:hover:text-blue-300 hover:shadow-sm'
                     }`
-                  }
+                  }}
                   onClick={onClose}
                 >
                   <div className="flex items-center">
@@ -146,7 +105,11 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {item.name}
                   </div>
                   {item.badge && (
-                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      isParentActive(item.href)
+                        ? 'bg-white/20 text-white'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                    }`}>
                       {item.badge}
                     </span>
                   )}
@@ -154,21 +117,29 @@ const Sidebar = ({ isOpen, onClose }) => {
                 
                 {/* Submenu */}
                 {item.submenu && (
-                  <div className="ml-6 mt-1 space-y-1">
+                  <div className="ml-8 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
                     {item.submenu.map((subItem) => (
                       <NavLink
                         key={subItem.name}
                         to={subItem.href}
+                        end={subItem.href === item.href} // Use end for exact match on "All Portfolio"
                         className={({ isActive }) =>
-                          `block px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          `block px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 relative ${
                             isActive
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                              : 'text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700/50'
+                              ? 'bg-blue-600 text-white shadow-md font-semibold'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300'
                           }`
                         }
                         onClick={onClose}
                       >
-                        {subItem.name}
+                        {({ isActive }) => (
+                          <>
+                            {isActive && (
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full"></span>
+                            )}
+                            <span className={isActive ? 'ml-1' : ''}>{subItem.name}</span>
+                          </>
+                        )}
                       </NavLink>
                     ))}
                   </div>
@@ -197,7 +168,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <button
               onClick={handleSignOut}
               disabled={isLoggingOut}
-              className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-red-50 dark:text-gray-300 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 dark:hover:from-red-900/20 dark:hover:to-red-900/30 rounded-lg transition-all duration-200 hover:text-red-600 dark:hover:text-red-400 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-700"
             >
               {isLoggingOut ? (
                 <Loader2 className="w-4 h-4 mr-3 animate-spin" />
