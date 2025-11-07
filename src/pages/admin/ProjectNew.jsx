@@ -161,7 +161,7 @@ const ProjectNew = () => {
                   <ImageUpload
                     value={formData.image}
                     onChange={(value) => setFormData({ ...formData, image: value })}
-                    previewClassName="w-32 h-32"
+                    previewClassName="w-full min-h-[300px]"
                     maxSize={5 * 1024 * 1024} // 5MB
                   />
                 </div>

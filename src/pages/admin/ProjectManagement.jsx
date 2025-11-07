@@ -436,12 +436,14 @@ const ProjectManagement = () => {
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1">
-                <ImageWithFallback
-                  src={selectedProjectForModal.image}
-                  alt={selectedProjectForModal.title}
-                  className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                  fallbackText={selectedProjectForModal.title ? selectedProjectForModal.title.charAt(0).toUpperCase() : 'P'}
-                />
+                <div className="w-full rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center" style={{ minHeight: '300px' }}>
+                  <ImageWithFallback
+                    src={selectedProjectForModal.image}
+                    alt={selectedProjectForModal.title}
+                    className="w-full h-auto max-h-[500px] object-contain"
+                    fallbackText={selectedProjectForModal.title ? selectedProjectForModal.title.charAt(0).toUpperCase() : 'P'}
+                  />
+                </div>
                 <div className="mt-4 space-y-2">
                   <div className="text-sm text-gray-600 dark:text-gray-300">
                     <span className="font-medium">Category:</span> {selectedProjectForModal.category || '-'}
