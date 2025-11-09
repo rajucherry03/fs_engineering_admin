@@ -19,7 +19,8 @@ import { db } from '../firebase/config.js'
 export class ProjectService {
   static async getProjects(filters, lastDoc) {
     try {
-      let q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'))
+      // Get all projects first to handle missing sortOrder
+      let q = query(collection(db, 'projects'))
       
       if (filters?.status) {
         q = query(q, where('status', '==', filters.status))
@@ -38,15 +39,53 @@ export class ProjectService {
         q = query(q, where('createdAt', '<=', Timestamp.fromDate(filters.dateRange.end)))
       }
       
-      if (lastDoc) {
-        q = query(q, startAfter(lastDoc))
+      const snapshot = await getDocs(q)
+      let projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      
+      // Ensure all projects have sortOrder (migrate old projects)
+      const needsMigration = projects.some(p => p.sortOrder === undefined)
+      if (needsMigration) {
+        const batch = writeBatch(db)
+        projects.forEach((project, index) => {
+          if (project.sortOrder === undefined) {
+            const projectRef = doc(db, 'projects', project.id)
+            batch.update(projectRef, { sortOrder: index })
+            project.sortOrder = index
+          }
+        })
+        await batch.commit()
       }
       
-      q = query(q, limit(20))
+      // Sort by sortOrder (ascending - lower numbers first)
+      projects.sort((a, b) => {
+        const orderA = a.sortOrder !== undefined ? a.sortOrder : 999999
+        const orderB = b.sortOrder !== undefined ? b.sortOrder : 999999
+        return orderA - orderB
+      })
       
-      const snapshot = await getDocs(q)
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      return projects
     } catch (error) {
+      throw error
+    }
+  }
+  
+  // Reorder projects after drag and drop
+  static async reorderProjects(projectIds) {
+    try {
+      const batch = writeBatch(db)
+      
+      projectIds.forEach((projectId, index) => {
+        const projectRef = doc(db, 'projects', projectId)
+        batch.update(projectRef, { 
+          sortOrder: index,
+          updatedAt: new Date().toISOString()
+        })
+      })
+      
+      await batch.commit()
+      console.log('Projects reordered successfully')
+    } catch (error) {
+      console.error('Error reordering projects:', error)
       throw error
     }
   }
@@ -70,6 +109,13 @@ export class ProjectService {
       const now = new Date().toISOString()
       let imageData = projectData.image || ''
       
+      // Get the maximum sortOrder to add new project at the end
+      const allProjects = await getDocs(query(collection(db, 'projects'), orderBy('sortOrder', 'desc'), limit(1)))
+      const maxSortOrder = allProjects.docs.length > 0 && allProjects.docs[0].data().sortOrder !== undefined
+        ? allProjects.docs[0].data().sortOrder
+        : -1
+      const newSortOrder = maxSortOrder + 1
+      
       // Store base64 image directly in Firestore (same technique as existing projects)
       // If it's a base64 data URI, store it as-is; if it's a URL, store the URL
       const project = {
@@ -79,6 +125,7 @@ export class ProjectService {
         analysis: projectData.analysis || '',
         estimation: projectData.estimation || '',
         status: projectData.status || 'draft',
+        sortOrder: newSortOrder, // Add sortOrder for drag and drop arrangement
         createdAt: now,
         updatedAt: now,
         views: 0

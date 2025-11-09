@@ -79,6 +79,18 @@ export const useProjects = (filters?: ProjectFilters) => {
     }
   }
 
+  const reorderProjects = async (projectIds: string[]) => {
+    try {
+      await ProjectService.reorderProjects(projectIds)
+      // Refresh projects to get updated order
+      const data = await ProjectService.getProjects(filters)
+      setProjects(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reorder projects')
+      throw err
+    }
+  }
+
   return {
     projects,
     loading,
@@ -87,7 +99,8 @@ export const useProjects = (filters?: ProjectFilters) => {
     updateProject,
     deleteProject,
     bulkDeleteProjects,
-    bulkUpdateProjects
+    bulkUpdateProjects,
+    reorderProjects
   }
 }
 

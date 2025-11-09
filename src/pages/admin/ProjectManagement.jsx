@@ -15,20 +15,24 @@ import {
   Clock,
   AlertCircle,
   FolderOpen,
-  X
+  X,
+  GripVertical
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 const ProjectManagement = () => {
   const navigate = useNavigate()
-  const { projects, loading, deleteProject, bulkDeleteProjects, bulkUpdateProjects } = useProjects()
+  const { projects, loading, deleteProject, bulkDeleteProjects, bulkUpdateProjects, reorderProjects } = useProjects()
   const [selectedProjects, setSelectedProjects] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [selectedProjectForModal, setSelectedProjectForModal] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [draggedProject, setDraggedProject] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [isReordering, setIsReordering] = useState(false)
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,6 +41,65 @@ const ProjectManagement = () => {
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  // Drag and drop handlers
+  const handleDragStart = (e, projectId, index) => {
+    setDraggedProject({ id: projectId, index })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/html', e.target)
+  }
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverIndex(index)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault()
+    setDragOverIndex(null)
+
+    if (!draggedProject) return
+
+    const draggedIndex = filteredProjects.findIndex(p => p.id === draggedProject.id)
+    if (draggedIndex === dropIndex || draggedIndex === -1) {
+      setDraggedProject(null)
+      return
+    }
+
+    // Create new order for filtered projects
+    const newFilteredOrder = [...filteredProjects]
+    const [removed] = newFilteredOrder.splice(draggedIndex, 1)
+    newFilteredOrder.splice(dropIndex, 0, removed)
+
+    // Get all projects and maintain order for non-filtered ones
+    // Reorder only the filtered projects while keeping others in their relative positions
+    const filteredIds = new Set(newFilteredOrder.map(p => p.id))
+    const nonFilteredProjects = projects.filter(p => !filteredIds.has(p.id))
+    
+    // Combine: filtered projects in new order + non-filtered projects maintaining their order
+    const allProjectIds = [
+      ...newFilteredOrder.map(p => p.id),
+      ...nonFilteredProjects.map(p => p.id)
+    ]
+
+    try {
+      setIsReordering(true)
+      toast.loading('Reordering projects...', { id: 'reorder' })
+      await reorderProjects(allProjectIds)
+      toast.success('Projects reordered successfully!', { id: 'reorder' })
+    } catch (error) {
+      console.error('Error reordering:', error)
+      toast.error('Failed to reorder projects', { id: 'reorder' })
+    } finally {
+      setIsReordering(false)
+      setDraggedProject(null)
+    }
+  }
 
   const handleSelectProject = (projectId) => {
     setSelectedProjects(prev => 
@@ -251,13 +314,16 @@ const ProjectManagement = () => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left">
+                <th className="px-6 py-3 text-left w-12">
                   <input
                     type="checkbox"
                     checked={selectedProjects.length === filteredProjects.length && filteredProjects.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8" title="Drag to reorder projects">
+                  <span className="sr-only">Reorder</span>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Project
@@ -286,12 +352,20 @@ const ProjectManagement = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredProjects.map((project) => (
+              {filteredProjects.map((project, index) => (
                 <motion.tr
                   key={project.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`
+                    hover:bg-gray-50 dark:hover:bg-gray-700
+                    ${draggedProject?.id === project.id ? 'opacity-50' : ''}
+                    ${dragOverIndex === index ? 'bg-blue-50 dark:bg-blue-900/20 border-t-2 border-blue-500' : ''}
+                    ${isReordering ? 'pointer-events-none' : ''}
+                  `}
                 >
                   <td className="px-6 py-4">
                     <input
@@ -299,7 +373,21 @@ const ProjectManagement = () => {
                       checked={selectedProjects.includes(project.id)}
                       onChange={() => handleSelectProject(project.id)}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      onClick={(e) => e.stopPropagation()}
                     />
+                  </td>
+                  <td className="px-2 py-4">
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation()
+                        handleDragStart(e, project.id, index)
+                      }}
+                      className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="w-5 h-5" />
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
